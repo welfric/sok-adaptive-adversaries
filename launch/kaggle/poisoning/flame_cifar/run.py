@@ -4,7 +4,8 @@ Setting taken from FLAME (Nguyen et al., USENIX Security 2022; arXiv:2101.02281 
 wherever the paper states it; the zhmzm README's CIFAR-10 example fills the rest.
 PAPER_SETTING below records the source of every value and run.json carries it.
 
-Runs the unofficial harness unchanged at a pinned commit, once per (attack, defence):
+Runs the unofficial harness at a pinned commit plus HARNESS_PATCH (two bug fixes, below),
+once per (attack, defence):
   python main_fed.py --dataset cifar --model resnet --iid 1 --num_users 100 --frac 0.1
                      --malicious 0.2 --noise 0.001 --attack <A> --defence <D> ...
   attacks:  dba    (FLAME Table 3 has a CIFAR-10 DBA row: the number to compare against)
@@ -18,6 +19,16 @@ Known gaps to the paper (the harness cannot close them without editing upstream)
   - training from scratch for ROUNDS rounds; the paper does not state rounds, local
     epochs, batch size or learning rate for CIFAR-10
 
+HARNESS_PATCH fixes two upstream bugs that would otherwise invalidate the comparison:
+  1. utils/defense.py flame(): each admitted update was clipped with norm_list[i], the norm
+     of the i-th client overall, not of the i-th admitted client. FLAME Alg. 1 line 11
+     uses gamma = S_t / e_{b_l}. Fixed to norm_list[benign_client[i]].
+  2. models/MaliciousUpdate.py and models/test.py save_img() min-max rescaled the image
+     in place while writing a preview PNG. On a GPU, poisoned training images (CPU
+     tensors) were rescaled to [0, 1] but triggered test images (CUDA tensors, copied by
+     .cpu()) were not, so the backdoor was trained and tested on different inputs.
+     Fixed by writing the PNG from a copy.
+
 Upstream defines --seed but never uses it, so main_fed.py is started through runpy
 after seeding random/numpy/torch with SEED. GPU kernels may still be non-deterministic.
 run.json is rewritten after every run, so a Kaggle timeout keeps the finished ones.
@@ -25,6 +36,7 @@ run.json is rewritten after every run, so a Kaggle timeout keeps the finished on
 Local smoke test (CPU, 1 round; ResNet-18 on CPU takes a few minutes per round):
   SOK_WORK=/tmp/sok SOK_OUT=/tmp/sok-out-cifar SOK_EPOCHS=1 SOK_RUNS=dba:flame python run.py
 """
+import hashlib
 import json
 import os
 import platform
@@ -71,10 +83,18 @@ PAPER_SETTING = {
     "HDBSCAN": "paper §4.3.1 / App. E: min_cluster_size = n/2+1, min_samples = 1 (harness same)",
     "clipping": "paper §4.3.2: S_t = median L2 norm of all n updates (harness same)",
     "frac=0.1": "paper: clients per round not stated for CIFAR-10. Harness default",
-    "poison_frac=0.5": "paper: PDR not stated for CIFAR-10. Same as the Fashion-MNIST run",
+    "poison_frac=0.5": "paper: PDR not stated for CIFAR-10. Same flag as the Fashion-MNIST run. "
+                       "Harness meaning (one-to-one backdoor): in each batch, about half of the "
+                       "class-7 images (floor(n/2)+1) get the trigger and label 5, replacing the "
+                       "clean ones, i.e. roughly 5-7% of a malicious client's samples, not 50%",
     "lr=0.1, local_ep=2, local_bs=64": "paper: not stated. zhmzm README CIFAR-10 example",
     "rounds": "paper: not stated. 200, as in the zhmzm README example; trained from scratch",
-    "attack schedule": "harness: int(0.2 * 10) = 2 malicious clients in every round from round 0",
+    "attack schedule": "harness: int(0.2 * 10) = 2 malicious clients in every round from round 1 "
+                       "(round 0 has none: attack starts once accuracy > --attack_begin 0). "
+                       "BadNet attackers are drawn from clients 0-20, DBA cycles clients 0-19, "
+                       "each DBA client holding one quarter of the 5x5 trigger",
+    "trigger": "5x5 white square at (0, 0), in the normalised input space; DBA's four pieces "
+               "tile the same square, so both attacks are tested with the same global trigger",
 }
 PAPER_REFERENCE = {  # FLAME Table 3, CIFAR-10, percentages
     "dba": {"no_defense": {"BA": 93.8, "MA": 57.4}, "flame": {"BA": 3.2, "MA": 76.2}},
@@ -82,6 +102,26 @@ PAPER_REFERENCE = {  # FLAME Table 3, CIFAR-10, percentages
     "badnet": "not in the paper; zhmzm README (unofficial): no defence ASR 70.2 / Acc 80.38, "
               "FLAME ASR 3.33 / Acc 78.77 (CIFAR-10, ResNet18, IID)",
 }
+# (file, exact old text, new text). Each old text must occur exactly once at FLAME_COMMIT.
+HARNESS_PATCH = [
+    # 1. FLAME Alg. 1 line 11: gamma = S_t / e_{b_l}, the admitted update's own norm
+    ("utils/defense.py",
+     "        gama = clip_value/norm_list[i]\n",
+     "        gama = clip_value/norm_list[benign_client[i]]\n"),
+    # 2. save_img only writes a preview PNG: work on a copy, never on the image itself
+    ("models/MaliciousUpdate.py",
+     "    def save_img(self, image):\n        img = image\n",
+     "    def save_img(self, image):\n        img = image.detach().cpu().clone()\n"),
+    ("models/MaliciousUpdate.py",
+     "            img = image.numpy()\n",
+     "            img = img.numpy()\n"),
+    ("models/test.py",
+     "def save_img(image):\n        img = image\n",
+     "def save_img(image):\n        img = image.detach().cpu().clone()\n"),
+    ("models/test.py",
+     "            img = image.cpu().numpy()\n",
+     "            img = img.numpy()\n"),
+]
 PIP_PACKAGES = ["hdbscan"]
 SOK_COMMIT = "__SOK_COMMIT__"  # filled in by launch/kaggle/push.sh
 
@@ -153,8 +193,19 @@ def main():
 
     if not os.path.isdir(os.path.join(REPO, ".git")):
         sh(["git", "clone", "-q", FLAME_REPO, REPO])
-    sh(["git", "checkout", "-q", FLAME_COMMIT], cwd=REPO)
+    # Pinned commit, no leftovers from an earlier run, then the bug-fix patch.
+    sh(["git", "reset", "-q", "--hard", FLAME_COMMIT], cwd=REPO)
+    sh(["git", "clean", "-fdq"], cwd=REPO)
     assert capture(["git", "rev-parse", "HEAD"], cwd=REPO) == FLAME_COMMIT
+    for rel, old, new in HARNESS_PATCH:
+        path = os.path.join(REPO, rel)
+        text = open(path).read()
+        assert text.count(old) == 1, f"patch target not found exactly once in {rel}: {old!r}"
+        with open(path, "w") as f:
+            f.write(text.replace(old, new))
+    patched = capture(["git", "diff", "--stat"], cwd=REPO)
+    print(patched, flush=True)
+    assert "3 files changed, 5 insertions(+), 5 deletions(-)" in patched, patched
     sh([sys.executable, "-m", "pip", "install", "-q", *PIP_PACKAGES])
 
     import torch
@@ -172,6 +223,13 @@ def main():
         "run": "FLAME's own claim: CIFAR-10 ResNet-18 IID, DBA and BadNet, FLAME vs FedAvg",
         "sok_commit": SOK_COMMIT,
         "upstream": {"repo": FLAME_REPO, "commit": FLAME_COMMIT},
+        "upstream_patch": {
+            "sha256": hashlib.sha256(json.dumps(HARNESS_PATCH).encode()).hexdigest(),
+            "diff_stat": patched,
+            "diff": capture(["git", "diff"], cwd=REPO),
+            "fixes": ["flame(): clip each admitted update by its own norm (Alg. 1 line 11)",
+                      "save_img(): stop rescaling triggered images in place"],
+        },
         "seed": SEED,
         "seeding": "random, numpy, torch, torch.cuda seeded before runpy of main_fed.py",
         "paper_setting": PAPER_SETTING,

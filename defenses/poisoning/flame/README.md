@@ -27,6 +27,16 @@ Paper numbers to compare against (Table 3, CIFAR-10, BA / MA in %): DBA, no defe
 
 ## Notes on the upstream code
 
+Two bugs, both fixed in `flame_cifar/run.py` (`HARNESS_PATCH`, 5 changed lines, applied after a hard reset to the pinned commit and recorded in `run.json`). Each was confirmed with a small probe before the fix:
+
+- **FLAME clipping uses the wrong norm.** `utils/defense.py`, `flame()`: `gama = clip_value/norm_list[i]` takes the norm of the i-th client overall, not of the i-th admitted client. Alg. 1 line 11 uses γ = S_t / e_{b_l}. In the probe (10 clients, 2 rejected), benign updates below the median were shrunk to 12% because they borrowed the rejected clients' norms, and updates above the median were not clipped. Fix: `norm_list[benign_client[i]]`. **The Fashion-MNIST run (`launch/kaggle/poisoning/flame`) used the unfixed code, so its FLAME result is not FLAME as specified.**
+- **`save_img()` changes the image it saves.** `models/MaliciousUpdate.py` and `models/test.py` min-max rescale the image in place while writing a preview PNG. Poisoned training images are CPU tensors, so they are always rescaled to [0, 1]. Triggered test images are CUDA tensors on a GPU; for 3-channel input `.cpu()` copies them, so they are *not* rescaled. On CIFAR-10 with a GPU, the backdoor was therefore trained and tested on different inputs. (For 1-channel Fashion-MNIST both sides were rescaled, so that run is consistent on this point.) Fix: write the PNG from a copy.
+
+Other behaviour worth knowing:
+
+- `--poison_frac 0.5` with a one-to-one backdoor does not poison 50% of a client's data: in each batch, about half of the source-class (7) images (floor(n/2)+1) are triggered and relabelled, replacing the clean ones, about 5 to 7% of the samples.
+- Every round from round 1 has exactly int(0.2 × 10) = 2 malicious clients; round 0 has none. BadNet attackers are drawn from clients 0 to 20; DBA cycles through clients 0 to 19, each holding one quarter of the 5×5 trigger, so DBA's global trigger is the BadNet square.
+- FLAME's norms and clipping bound use only `weight` and `bias` tensors; the cosine distances use the full state dict except `num_batches_tracked`. The paper does not say how BatchNorm statistics are handled.
 - `--seed` is parsed but never used. `run.py` seeds `random`, NumPy and torch before starting `main_fed.py` through `runpy`, without editing the upstream file.
 - `models/test.py` writes `./save/test_trigger.png` regardless of `--save`, so `./save` must exist.
 - With these flags the harness reports 100 clients, 10 per round, 3 local epochs, batch size 50, backdoor from class 7 to class 5, square trigger at (0, 0).
