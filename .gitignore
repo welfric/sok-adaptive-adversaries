@@ -35,3 +35,7 @@ paper/**/*.fls
 
 # OS
 .DS_Store
+
+# Local-only project notes
+CLAUDE.md
+PLAN.md
