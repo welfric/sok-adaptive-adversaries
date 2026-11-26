@@ -1,0 +1,37 @@
+# Upstream code is added as submodules; local clones and caches stay out
+third_party/*/
+!third_party/.gitkeep
+
+# Run outputs and weights
+results/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+wandb/
+
+# Secrets
+.env
+kaggle.json
+*.token
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# LaTeX build
+paper/**/*.aux
+paper/**/*.log
+paper/**/*.out
+paper/**/*.bbl
+paper/**/*.blg
+paper/**/*.synctex.gz
+paper/**/*.fdb_latexmk
+paper/**/*.fls
+
+# OS
+.DS_Store
