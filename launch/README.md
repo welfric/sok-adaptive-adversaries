@@ -9,7 +9,7 @@ One folder per defence, mirroring `defenses/`: `kaggle/<field>/<defence>/` holds
 | Kernel | Runs | Output |
 |---|---|---|
 | `kaggle/adversarial_robustness/blacklight` | OARS, Square, untargeted, `adaptive` config, images 0 to 99 of the CIFAR-10 test set, then `analysis.py` | `analysis.txt` (attack success, mean queries, cache hits), `logs/`, `config.json` |
-| `kaggle/poisoning/flame` | zhmzm/FLAME `main_fed.py`, BadNet on Fashion-MNIST, 200 rounds, once with `--defence flame` and once with `--defence avg` (FedAvg baseline) | `run.json` (final main and backdoor accuracy per defence), `curves.json`, `<defence>_stdout.txt`, `<defence>_save/` |
+| `kaggle/poisoning/flame` | zhmzm/FLAME `main_fed.py` with the same two bug fixes, BadNet on Fashion-MNIST, 200 rounds, once with `--defence flame` and once with `--defence avg` (FedAvg baseline) | `run.json` (final main and backdoor accuracy per defence), `curves.json`, `<defence>_stdout.txt`, `<defence>_save/` |
 | `kaggle/poisoning/flame_cifar` | zhmzm/FLAME `main_fed.py`, with two upstream bug fixes applied (FLAME clipping index; in-place image rescaling; see `defenses/poisoning/flame/README.md`), in FLAME's paper setting: CIFAR-10, ResNet-18, IID, 100 clients, 20% malicious, noise factor 0.001, 200 rounds. DBA and BadNet, each with `--defence flame` and `--defence avg` (4 runs) | `run.json` (per run: final/max/last-10% backdoor accuracy, main accuracy, FLAME admission rates, the paper's Table 3 numbers, the source of every setting), `curves.json`, `<attack>_<defence>_stdout.txt`, `<attack>_<defence>_save/` |
 
 Every run also writes `run.json` (our commit, upstream commit, command, seed, torch/CUDA/GPU), `pip_freeze.txt` and `nvidia_smi.txt`.

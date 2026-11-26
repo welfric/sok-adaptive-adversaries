@@ -1,10 +1,21 @@
 """Kaggle kernel: FLAME's own claim, BadNet on Fashion-MNIST, zhmzm/FLAME harness.
 
-Runs the unofficial harness unchanged at a pinned commit:
+Runs the unofficial harness at a pinned commit plus HARNESS_PATCH (two bug fixes,
+identical to launch/kaggle/poisoning/flame_cifar/run.py):
   python main_fed.py --dataset fashion_mnist --model cnn --defence <D> --attack badnet
                      --malicious 0.2 --poison_frac 0.5 --lr 0.1 --epochs 200
 once per defence in DEFENCES. "flame" is FLAME's claim; "avg" (FedAvg, no defence)
 is the baseline it is measured against.
+
+HARNESS_PATCH:
+  1. utils/defense.py flame(): admitted updates were clipped with norm_list[i], the norm
+     of the i-th client overall, not of the i-th admitted client (FLAME Alg. 1 line 11:
+     gamma = S_t / e_{b_l}). Fixed to norm_list[benign_client[i]]. Earlier versions of this
+     kernel ran without it, so their FLAME numbers do not reflect FLAME.
+  2. save_img() min-max rescaled each triggered image in place while writing a preview
+     PNG. For 1-channel Fashion-MNIST this happened on both the training and the test
+     side, so earlier runs were consistent, but the trigger was "square + rescale". Now
+     neither side is rescaled, as in the CIFAR-10 kernel.
 
 Upstream defines --seed but never uses it, so main_fed.py is started through
 runpy after seeding random/numpy/torch with SEED. The upstream file is not edited.
@@ -15,6 +26,7 @@ This does not run Yang et al.'s attack; that glue is not written yet.
 Local smoke test (CPU, 1 round):
   SOK_WORK=/tmp/sok SOK_OUT=/tmp/sok-out SOK_EPOCHS=1 python run.py
 """
+import hashlib
 import json
 import os
 import platform
@@ -33,6 +45,26 @@ EPOCHS = int(os.environ.get("SOK_EPOCHS", "200"))
 ARGS = ["--dataset", "fashion_mnist", "--model", "cnn", "--attack", "badnet",
         "--malicious", "0.2", "--poison_frac", "0.5", "--lr", "0.1",
         "--epochs", str(EPOCHS), "--seed", str(SEED)]
+# (file, exact old text, new text). Each old text must occur exactly once at FLAME_COMMIT.
+HARNESS_PATCH = [
+    # 1. FLAME Alg. 1 line 11: gamma = S_t / e_{b_l}, the admitted update's own norm
+    ("utils/defense.py",
+     "        gama = clip_value/norm_list[i]\n",
+     "        gama = clip_value/norm_list[benign_client[i]]\n"),
+    # 2. save_img only writes a preview PNG: work on a copy, never on the image itself
+    ("models/MaliciousUpdate.py",
+     "    def save_img(self, image):\n        img = image\n",
+     "    def save_img(self, image):\n        img = image.detach().cpu().clone()\n"),
+    ("models/MaliciousUpdate.py",
+     "            img = image.numpy()\n",
+     "            img = img.numpy()\n"),
+    ("models/test.py",
+     "def save_img(image):\n        img = image\n",
+     "def save_img(image):\n        img = image.detach().cpu().clone()\n"),
+    ("models/test.py",
+     "            img = image.cpu().numpy()\n",
+     "            img = img.numpy()\n"),
+]
 PIP_PACKAGES = ["hdbscan"]
 SOK_COMMIT = "__SOK_COMMIT__"  # filled in by launch/kaggle/push.sh
 
@@ -61,8 +93,10 @@ def sh(cmd, cwd=None, log=None):
         fh = open(log, "w") if log else None
         for line in p.stdout:
             sys.stdout.write(line)
+            sys.stdout.flush()  # stdout is block-buffered when redirected to a file
             if fh:
                 fh.write(line)
+                fh.flush()  # a killed kernel keeps the stdout written so far
         if fh:
             fh.close()
     if p.returncode != 0:
@@ -95,8 +129,19 @@ def main():
 
     if not os.path.isdir(os.path.join(REPO, ".git")):
         sh(["git", "clone", "-q", FLAME_REPO, REPO])
-    sh(["git", "checkout", "-q", FLAME_COMMIT], cwd=REPO)
+    # Pinned commit, no leftovers from an earlier run, then the bug-fix patch.
+    sh(["git", "reset", "-q", "--hard", FLAME_COMMIT], cwd=REPO)
+    sh(["git", "clean", "-fdq"], cwd=REPO)
     assert capture(["git", "rev-parse", "HEAD"], cwd=REPO) == FLAME_COMMIT
+    for rel, old, new in HARNESS_PATCH:
+        path = os.path.join(REPO, rel)
+        text = open(path).read()
+        assert text.count(old) == 1, f"patch target not found exactly once in {rel}: {old!r}"
+        with open(path, "w") as f:
+            f.write(text.replace(old, new))
+    patched = capture(["git", "diff", "--stat"], cwd=REPO)
+    print(patched, flush=True)
+    assert "3 files changed, 5 insertions(+), 5 deletions(-)" in patched, patched
     sh([sys.executable, "-m", "pip", "install", "-q", *PIP_PACKAGES])
 
     import torch
@@ -134,6 +179,13 @@ def main():
         "run": "FLAME's own claim: BadNet, Fashion-MNIST CNN, FLAME vs FedAvg",
         "sok_commit": SOK_COMMIT,
         "upstream": {"repo": FLAME_REPO, "commit": FLAME_COMMIT},
+        "upstream_patch": {
+            "sha256": hashlib.sha256(json.dumps(HARNESS_PATCH).encode()).hexdigest(),
+            "diff_stat": patched,
+            "diff": capture(["git", "diff"], cwd=REPO),
+            "fixes": ["flame(): clip each admitted update by its own norm (Alg. 1 line 11)",
+                      "save_img(): stop rescaling triggered images in place"],
+        },
         "seed": SEED,
         "seeding": "random, numpy, torch, torch.cuda seeded before runpy of main_fed.py",
         "python": platform.python_version(),
