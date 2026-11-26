@@ -39,3 +39,7 @@ paper/**/*.fls
 # Local-only project notes
 CLAUDE.md
 PLAN.md
+
+# Local smoke-test folders from launch/kaggle/*/run.py
+_work/
+_out/

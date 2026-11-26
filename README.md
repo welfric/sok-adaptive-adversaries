@@ -22,7 +22,7 @@ The paper:
 
 ## Defences under evaluation
 
-One row per defence. This table grows as contributors add fields and defences.
+Each field is evaluated on **several defences**, not one. Every defence gets its own row, and the table grows as contributors add defences to a field or add new fields. The rows below are the first defence in each field.
 
 | Field | Defence | Paper | Implementation used | Contributor |
 |---|---|---|---|---|
@@ -34,7 +34,7 @@ One row per defence. This table grows as contributors add fields and defences.
 
 ## Attacks chosen for evaluation
 
-These attacks were chosen because they are adaptive to the defence they target. The axis columns are filled in only from the attack paper's own text (quote and section number). Until a paper has been annotated, its cells read "to annotate".
+Each defence is paired with an attack that is adaptive to it, so this table also gets one row per defence. The attacks are fixed: we run the authors' published code unchanged. The axis columns are filled in only from the attack paper's own text (quote and section number). Until a paper has been annotated, its cells read "to annotate".
 
 | Attack | Paper | Target defence | Code | (i) Knowledge | (ii) Defence-specific | (iii) Feedback | Status |
 |---|---|---|---|---|---|---|---|
@@ -47,14 +47,16 @@ These attacks were chosen because they are adaptive to the defence they target. 
 ## Repository layout
 
 ```
-defenses/<field>/   one folder per defence/attack pair (attacks are fixed upstream code)
-common/             shared interface, query budget, run logging
-launch/             Kaggle and SSH launchers
-paper/              the write-up
+defenses/<field>/<defence>/   one folder per defence; a field holds several
+common/                       shared interface, query budget, run logging
+launch/                       Kaggle and SSH launchers
+paper/                        the write-up
 ```
+
+Current folders: `adversarial_robustness/blacklight`, `jailbreak_prompt_injection/secalign`, `privacy/hamp`, `watermarking/kgw`, `poisoning/flame`.
 
 ## Adding a defence or attack
 
 1. Add a row to each table above.
-2. Create `defenses/<field>/` with a README naming the defence, the attack and the pinned upstream commits.
+2. Create `defenses/<field>/<defence>/` (and the field folder, if the field is new), with a README naming the defence, its attack and the pinned upstream commits.
 3. Fill in the axis columns only from the attack paper's text, with a section number. Write "unstated" when the paper does not say.
