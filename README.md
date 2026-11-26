@@ -47,16 +47,14 @@ These attacks were chosen because they are adaptive to the defence they target. 
 ## Repository layout
 
 ```
-defenses/<field>/   wrapper around each defence
-attacks/<field>/    attack code and configs
+defenses/<field>/   one folder per defence/attack pair (attacks are fixed upstream code)
 common/             shared interface, query budget, run logging
 launch/             Kaggle and SSH launchers
 paper/              the write-up
-PLAN.md             implementation plan and per-field status
 ```
 
 ## Adding a defence or attack
 
 1. Add a row to each table above.
-2. Create `defenses/<field>/` and `attacks/<field>/`, each with a README naming the paper and the implementation used.
+2. Create `defenses/<field>/` with a README naming the defence, the attack and the pinned upstream commits.
 3. Fill in the axis columns only from the attack paper's text, with a section number. Write "unstated" when the paper does not say.
