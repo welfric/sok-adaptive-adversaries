@@ -80,7 +80,9 @@ PAPER_SETTING = {
     "attack_goal 7 -> attack_label 5": "paper App. A: one class relabelled to another; "
                                         "classes not stated. Harness default pair",
     "noise=0.001": "paper App. B.3: lambda = 0.001 for IC; harness sigma = noise * median norm",
-    "HDBSCAN": "paper §4.3.1 / App. E: min_cluster_size = n/2+1, min_samples = 1 (harness same)",
+    "HDBSCAN": "paper §4.3.1 / App. E: min_cluster_size = n/2+1, min_samples = 1 (harness same). "
+               "Harness differs in input: cosine on full local weights incl. BN stats, not updates, "
+               "and the matrix is fit with the default Euclidean metric, not precomputed",
     "clipping": "paper §4.3.2: S_t = median L2 norm of all n updates (harness same)",
     "frac=0.1": "paper: clients per round not stated for CIFAR-10. Harness default",
     "poison_frac=0.5": "paper: PDR not stated for CIFAR-10. Same flag as the Fashion-MNIST run. "
