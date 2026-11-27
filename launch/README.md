@@ -4,13 +4,14 @@
 
 One folder per defence, mirroring `defenses/`: `kaggle/<field>/<defence>/` holds `kernel-metadata.json` and a self-contained `run.py` (Kaggle script kernel, Internet on).
 
-**GPU: T4 only.** Both `machine_shape` in the metadata and `push.sh` (`--accelerator NvidiaTeslaT4`, not overridable) request Kaggle's T4 option, which is two T4s; `run.py` uses only GPU 0. On Kaggle, `run.py` exits before running anything if the GPU is not a T4 (e.g. a P100), and records the GPU name in `run.json`. If you start a kernel from the web UI instead, pick "GPU T4 x2" under Settings > Accelerator. Each `run.py` clones the upstream repo at a pinned commit, installs what the Kaggle image lacks, runs the authors' commands unchanged and writes everything to `/kaggle/working/results/<pair>/`. The clone and the data stay in `/tmp`, outside the kernel output.
+**GPU: T4 only.** Both `machine_shape` in the metadata and `push.sh` (`--accelerator NvidiaTeslaT4`, not overridable) request Kaggle's T4 option, which is two T4s; `run.py` uses only GPU 0 (except `secalign_tap`, which needs both). On Kaggle, `run.py` exits before running anything if the GPU is not a T4 (e.g. a P100), and records the GPU name in `run.json`. If you start a kernel from the web UI instead, pick "GPU T4 x2" under Settings > Accelerator. Each `run.py` clones the upstream repo at a pinned commit, installs what the Kaggle image lacks, runs the authors' commands unchanged and writes everything to `/kaggle/working/results/<pair>/`. The clone and the data stay in `/tmp`, outside the kernel output.
 
 | Kernel | Runs | Output |
 |---|---|---|
 | `kaggle/adversarial_robustness/blacklight` | OARS, Square, untargeted, `adaptive` config, images 0 to 99 of the CIFAR-10 test set, then `analysis.py` | `analysis.txt` (attack success, mean queries, cache hits), `logs/`, `config.json` |
 | `kaggle/poisoning/flame` | zhmzm/FLAME `main_fed.py` with the same two bug fixes, BadNet on Fashion-MNIST, 200 rounds, once with `--defence flame` and once with `--defence avg` (FedAvg baseline) | `run.json` (final main and backdoor accuracy per defence), `curves.json`, `<defence>_stdout.txt`, `<defence>_save/` |
 | `kaggle/poisoning/flame_cifar` | zhmzm/FLAME `main_fed.py`, with two upstream bug fixes applied (FLAME clipping index; in-place image rescaling; see `defenses/poisoning/flame/README.md`), in FLAME's paper setting: CIFAR-10, ResNet-18, IID, 100 clients, 20% malicious, noise factor 0.001, 200 rounds. DBA and BadNet, each with `--defence flame` and `--defence avg` (4 runs) | `run.json` (per run: final/max/last-10% backdoor accuracy, main accuracy, FLAME admission rates, the paper's Table 3 numbers, the source of every setting), `curves.json`, `<attack>_<defence>_stdout.txt`, `<attack>_<defence>_save/` |
+| `kaggle/jailbreak_prompt_injection/secalign_tap` | TAP (paper settings: b=4, w=10, d=10) against Meta-SecAlign-8B, attacker and evaluator `mlabonne/Meta-Llama-3.1-8B-Instruct-abliterated`, all unquantised, on two vLLM servers. Prompt injection on AlpacaFarm-Hacked (208) and jailbreaking on TAP's AdvBench subset (50), plus one-shot baselines on the defended and base model. Also runs on an A6000; see `defenses/jailbreak_prompt_injection/secalign/README.md` | `run.json` (ASR, target queries, baselines, config, model revisions), `<task>/<config>.jsonl` (one TAP tree per item), `<task>/baseline_*.jsonl`, `server_*.log` |
 
 Every run also writes `run.json` (our commit, upstream commit, command, seed, torch/CUDA/GPU), `pip_freeze.txt` and `nvidia_smi.txt`.
 
@@ -80,6 +81,12 @@ SOK_WORK=/tmp/sok SOK_OUT=/tmp/sok-out-cifar SOK_EPOCHS=1 SOK_RUNS=dba:flame,bad
 ```bash
 SOK_WORK=/tmp/sok SOK_OUT=/tmp/sok-out python launch/kaggle/adversarial_robustness/blacklight/run.py --prepare-only
 ```
+
+```bash
+SOK_WORK=/tmp/sok SOK_OUT=/tmp/sok-out python launch/kaggle/jailbreak_prompt_injection/secalign_tap/run.py --dry-run
+```
+
+`--dry-run` replaces the models with canned outputs, so it checks the TAP loop, pruning, output files and resume without a GPU.
 
 The Blacklight script stops after the data export and import check with `--prepare-only`, because OARS `main.py` needs CUDA.
 
