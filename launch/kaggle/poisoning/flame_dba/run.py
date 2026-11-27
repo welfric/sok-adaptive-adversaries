@@ -22,6 +22,9 @@ adds the hook; it does not change DBA's algorithm:
   - torch.load(..., weights_only=True) for the pretrained checkpoint
   - seeds read from SOK_SEED instead of the hard-coded 1 (default 1, so unchanged)
   - main.py dispatches aggregation_methods == 'flame' to sok_flame.flame_update
+  - helper.average_shrink_models (DBA's FedAvg) skips integer buffers (BatchNorm
+    num_batches_tracked): current torch refuses to add the float update to a Long tensor. The
+    counter is unused, since DBA's BatchNorm layers use the default momentum 0.1
 Visdom (a live-plot server DBA imports) is replaced by a no-op stub on PYTHONPATH.
 
 The checkpoint is DBA's saved_models.zip from the Google Drive link in DBA's README; only
@@ -52,7 +55,11 @@ SEED = int(os.environ.get("SOK_SEED", "1"))
 SMOKE = os.environ.get("SOK_SMOKE") == "1"
 
 # (split, aggregation) in run order. IID first: FLAME §7.1 says its CIFAR-10 data are IID.
-RUNS = [("iid", "flame"), ("iid", "mean"), ("dirichlet", "flame"), ("dirichlet", "mean")]
+ALL_RUNS = [("iid", "flame"), ("iid", "mean"), ("dirichlet", "flame"), ("dirichlet", "mean")]
+# Kernel v1 (commit 8bd84be) completed both flame runs; both mean runs crashed in round 201 on the
+# integer-buffer bug patched below. Kaggle kernels take no env vars, so the default is the runs
+# still missing. Use ALL_RUNS for a full run.
+RUNS = [("iid", "mean"), ("dirichlet", "mean")]
 if os.environ.get("SOK_RUNS"):  # e.g. "iid:flame,iid:mean"
     RUNS = [tuple(r.split(":")) for r in os.environ["SOK_RUNS"].split(",")]
 
@@ -93,6 +100,12 @@ DBA_PATCH = [
     ("image_helper.py",
      "loaded_params = torch.load(f\"saved_models/{self.params['resumed_model_name']}\",map_location='cpu')\n",
      "loaded_params = torch.load(f\"saved_models/{self.params['resumed_model_name']}\",map_location='cpu', weights_only=True)\n"),
+    ("helper.py",
+     "self.params['sigma']))\n\n            data.add_(update_per_layer)\n        return True\n",
+     "self.params['sigma']))\n\n"
+     "            if not data.is_floating_point():  # SOK: num_batches_tracked (unused, momentum 0.1)\n"
+     "                continue\n"
+     "            data.add_(update_per_layer)\n        return True\n"),
 ]
 
 FLAME_SOURCE = r'''"""FLAME (Nguyen et al., USENIX Security 2022), Alg. 1, as a DBA aggregation method."""
