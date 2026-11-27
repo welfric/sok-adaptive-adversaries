@@ -26,6 +26,25 @@ Read from arXiv:2101.02281 v5 (extended version, 2023). Section numbers are from
 
 Paper numbers to compare against (Table 3, CIFAR-10, BA / MA in %): DBA, no defence 93.8 / 57.4, FLAME 3.2 / 76.2. Constrain-and-scale, no defence 81.9 / 89.8, FLAME 0 / 91.9. BadNet is not in the paper; the zhmzm README reports 70.2 / 80.38 without defence and 3.33 / 78.77 with FLAME (CIFAR-10, ResNet18, IID), unofficial, and from a different configuration (its example uses `--malicious 0.1 --poison_frac 1.0 --attack_goal -1 --triggerX 27`).
 
+## Results, `flame_dba` (Table 3 setting, seed 1)
+
+Kernel `sok-flame-dba`: v1 (commit `8bd84be`) ran the two FLAME runs; its two FedAvg runs crashed in round 201 on a DBA/current-torch incompatibility (float update added to BatchNorm `num_batches_tracked`). v2 (commit `44de2e0`, which skips integer buffers in DBA's FedAvg; the counter is unused with BatchNorm momentum 0.1) ran the two FedAvg runs. Both versions: DBA `3cabf7e`, checkpoint sha256 `d2aa06d2...` (epoch 200), Tesla T4, rounds 201 to 300, no NaN. Raw output: `results/kaggle/sok-flame-dba-v1/` and `-v2/`.
+
+BA / MA in %. Attacks at rounds 203, 205, 207, 209, one adversary each, update scaled by 100.
+
+| Split | Aggregation | BA r209 | MA r209 | BA r220 | BA r300 | MA r300 | Max BA from r203 | Mean BA r210-300 |
+|---|---|---|---|---|---|---|---|---|
+| IID | FedAvg | 97.7 | 69.2 | 79.5 | 78.9 | 79.7 | 97.7 | 80.3 |
+| IID | FLAME | 2.8 | 76.5 | 3.8 | 2.2 | 70.2 | 6.9 | 2.4 |
+| Dirichlet 0.5 | FedAvg | 96.1 | 57.5 | 85.1 | 71.1 | 79.2 | 96.3 | 78.4 |
+| Dirichlet 0.5 | FLAME | 1.0 | 68.5 | 2.4 | 2.7 | 65.8 | 12.0 | 2.6 |
+
+Table 3 (CIFAR-10, DBA): no defence 93.8 / 57.4, FLAME 3.2 / 76.2. **In DBA's own setting, FLAME's Table 3 DBA row reproduces** (single seed): BA drops from about 97 to about 1 to 3.
+
+- **Clipping, not clustering, stops this attack.** HDBSCAN admitted 2 of the 4 attackers (IID, rounds 207 and 209) and 3 of 4 (Dirichlet). Admitted attackers were clipped by gamma = S_t / e_i between 0.006 and 0.018 (update norms 655 to 1184 against S_t of 6.1 to 13.2). No round fell back to admitting everyone.
+- **FLAME costs main accuracy late in training.** FedAvg MA recovers from the attack to about 79 to 80 by round 300; FLAME MA falls from 76.2 at round 201 to 70.2 (IID) and 65.8 (Dirichlet). Candidate causes, not yet separated: the noise sigma = lambda * S_t added every round at eta = 0.1 (10 times larger relative to the applied update than with eta = 1, ATTACK_PROTOCOL.md §9), and dropping about 3 of 10 benign updates per round.
+- Single seed. Seeds 2 and 3 are still to run.
+
 ## Results, `flame_cifar` (sok-flame-cifar v2)
 
 Commit `2811ada`, patch sha256 `eb82ad5c...`, Tesla T4, seed 1, all 4 runs completed 200 rounds with no NaN or traceback. Raw output in `results/kaggle/sok-flame-cifar/` (git-ignored). BA / MA in %, round 199; "BA last 10%" is the mean over rounds 180 to 199.

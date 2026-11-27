@@ -6,6 +6,23 @@ Ahmad, 2026-11-26. Results from Kaggle (T4), for review.
 
 Yang et al.'s attack (the pair's attack in our plan) is not wired in yet. Every run here is a baseline that uses none of the three axes, apart from the FL caveat under "What this means for the project".
 
+## Update, 2026-11-27: fair re-run reproduces Table 3
+
+The fair re-run (next steps 1 and 2 below) is done: DBA's own code, config and pretrained round-200 checkpoint, FLAME implemented as in Alg. 1 (cosine on updates, `metric="precomputed"`), following `defenses/poisoning/ATTACK_PROTOCOL.md`. Single seed.
+
+| Split | Aggregation | BA r209 | Mean BA r210-300 | Max BA from r203 | MA r300 |
+|---|---|---|---|---|---|
+| IID | FedAvg | 97.7 | 80.3 | 97.7 | 79.7 |
+| IID | FLAME | 2.8 | 2.4 | 6.9 | 70.2 |
+| Dirichlet 0.5 | FedAvg | 96.1 | 78.4 | 96.3 | 79.2 |
+| Dirichlet 0.5 | FLAME | 1.0 | 2.6 | 12.0 | 65.8 |
+
+Table 3 says DBA BA 93.8 with no defence and 3.2 with FLAME. So FLAME's claim holds in the original attack setting. What stops the attack is median-norm clipping: HDBSCAN admitted 2 of 4 attackers (IID) and 3 of 4 (Dirichlet), but their ×100-scaled updates were clipped by a factor of 0.006 to 0.018. FLAME does cost about 10 to 13 points of MA by round 300 compared with FedAvg; the cause is not yet separated. Full table and notes: `defenses/poisoning/flame/README.md`, "Results, `flame_dba`".
+
+Together with the zhmzm runs below, this is a candidate SoK example: the same defence holds against DBA as originally configured (scaled one-shot updates, which clipping cancels) and fails against a persistent unscaled variant, and the paper leaves the attack details that decide this unstated. The two settings differ in more than one variable (harness, clustering, schedule, scaling, start point), so the specific cause still needs a one-variable ablation.
+
+The original report follows unchanged.
+
 ## Setup
 
 | Setting | Value |
