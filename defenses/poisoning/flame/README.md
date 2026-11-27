@@ -6,6 +6,7 @@
 | Attack (fixed) | Optimisation-based framework (Yang et al., CIKM 2024, arXiv:2407.15267): [Yuxin104/BreakSTOAPoisoningDefenses](https://github.com/Yuxin104/BreakSTOAPoisoningDefenses) at `e3b7b49752bc04ce31e234cd6050952206513cea` |
 | Run | Kaggle: [`launch/kaggle/poisoning/flame`](../../../launch/kaggle/poisoning/flame/run.py). FLAME's own claim only: BadNet, Fashion-MNIST CNN, `--malicious 0.2 --poison_frac 0.5 --lr 0.1 --epochs 200`, with `--defence flame` and the `--defence avg` baseline, harness patched as below. Yang et al.'s attack is not wired in yet |
 | Run, paper setting | Kaggle: [`launch/kaggle/poisoning/flame_cifar`](../../../launch/kaggle/poisoning/flame_cifar/run.py). FLAME's own claim in the paper's image-classification setting: CIFAR-10, ResNet-18, IID, DBA and BadNet, FLAME vs FedAvg. See below |
+| Run, Table 3 setting | Kaggle: [`launch/kaggle/poisoning/flame_dba`](../../../launch/kaggle/poisoning/flame_dba/run.py). DBA's own code, config and pretrained model, FLAME as specified in Alg. 1. Follows [`../ATTACK_PROTOCOL.md`](../ATTACK_PROTOCOL.md); supersedes `flame_cifar` as the test of Table 3 |
 
 ## FLAME's paper setting (CIFAR-10)
 

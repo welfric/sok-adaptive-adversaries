@@ -11,6 +11,7 @@ One folder per defence, mirroring `defenses/`: `kaggle/<field>/<defence>/` holds
 | `kaggle/adversarial_robustness/blacklight` | OARS, Square, untargeted, `adaptive` config, images 0 to 99 of the CIFAR-10 test set, then `analysis.py` | `analysis.txt` (attack success, mean queries, cache hits), `logs/`, `config.json` |
 | `kaggle/poisoning/flame` | zhmzm/FLAME `main_fed.py` with the same two bug fixes, BadNet on Fashion-MNIST, 200 rounds, once with `--defence flame` and once with `--defence avg` (FedAvg baseline) | `run.json` (final main and backdoor accuracy per defence), `curves.json`, `<defence>_stdout.txt`, `<defence>_save/` |
 | `kaggle/poisoning/flame_cifar` | zhmzm/FLAME `main_fed.py`, with two upstream bug fixes applied (FLAME clipping index; in-place image rescaling; see `defenses/poisoning/flame/README.md`), in FLAME's paper setting: CIFAR-10, ResNet-18, IID, 100 clients, 20% malicious, noise factor 0.001, 200 rounds. DBA and BadNet, each with `--defence flame` and `--defence avg` (4 runs) | `run.json` (per run: final/max/last-10% backdoor accuracy, main accuracy, FLAME admission rates, the paper's Table 3 numbers, the source of every setting), `curves.json`, `<attack>_<defence>_stdout.txt`, `<attack>_<defence>_save/` |
+| `kaggle/poisoning/flame_dba` | FLAME's Table 3 DBA row in DBA's own code ([AI-secure/DBA](https://github.com/AI-secure/DBA), pinned), its CIFAR-10 config and pretrained round-200 model, rounds 201 to 300, per `defenses/poisoning/ATTACK_PROTOCOL.md`. FLAME implemented as specified in Alg. 1 (cosine on updates, precomputed HDBSCAN). IID and Dirichlet 0.5, each with `flame` and `mean` (FedAvg) (4 runs) | `run.json` (per run: BA/MA at rounds 209, 210, 220, 250, 300, max and mean BA, FLAME admission of each attacker, checkpoint sha256, full config), `curves.json`, `<split>_<aggregation>_stdout.txt`, `<split>_<aggregation>_csv/` |
 
 Every run also writes `run.json` (our commit, upstream commit, command, seed, torch/CUDA/GPU), `pip_freeze.txt` and `nvidia_smi.txt`.
 
@@ -45,6 +46,10 @@ launch/kaggle/push.sh launch/kaggle/poisoning/flame
 
 ```bash
 launch/kaggle/push.sh launch/kaggle/poisoning/flame_cifar
+```
+
+```bash
+launch/kaggle/push.sh launch/kaggle/poisoning/flame_dba
 ```
 
 `push.sh` fills in your username and this repo's commit (with `-dirty` if the tree has uncommitted changes, so commit first) in a temp copy, then runs `kaggle kernels push --accelerator NvidiaTeslaT4`. It prints the status and output commands for the kernel, e.g.:
