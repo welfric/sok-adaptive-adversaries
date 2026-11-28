@@ -29,6 +29,7 @@ Each field is evaluated on **several defences**, not one. Every defence gets its
 | Adversarial robustness | Blacklight (stateful query detection) | Li et al., USENIX Security 2022 | Implementation in the OARS repo | Ahmad |
 | Jailbreaking and prompt injection | SecAlign, released Meta-SecAlign-8B checkpoint (LoRA on Llama-3.1-8B-Instruct) | Chen et al., Meta SecAlign, arXiv:2507.02735 | [facebook/Meta-SecAlign-8B](https://huggingface.co/facebook/Meta-SecAlign-8B) (gated), [facebookresearch/Meta_SecAlign](https://github.com/facebookresearch/Meta_SecAlign) | Ahmad |
 | Privacy (membership inference) | HAMP | Chen and Pattabiraman, NDSS 2024 | [DependableSystemsLab/MIA_defense_HAMP](https://github.com/DependableSystemsLab/MIA_defense_HAMP) | Ahmad |
+| Privacy (membership inference) | MemGuard (test-time confidence masking) | Jia et al., CCS 2019 | MemGuard block in the HAMP repository (identical loop to [jinyuan-jia/MemGuard](https://github.com/jinyuan-jia/MemGuard)); run against LiRA, see `defenses/privacy/memguard/PROTOCOL.md` | Ahmad |
 | Watermarking | KGW2-SelfHash (self-salted anchored Min-hash, context width 4) | Kirchenbauer et al., *On the Reliability of Watermarks for Large Language Models*, ICLR 2024 (builds on KGW, ICML 2023) | `src/watermarks/kgw/` in the Watermark Stealing repo | Ahmad |
 | Watermarking | Unigram (one fixed green list) | Zhao et al., *Provable Robust Watermarking for AI-Generated Text*, ICLR 2024 | `gptwm` scheme in the Watermark Stealing repo | Ahmad |
 | Poisoning and backdoors (federated learning) | FLAME | Nguyen et al., USENIX Security 2022 | [zhmzm/FLAME](https://github.com/zhmzm/FLAME) (unofficial) | Ahmad |
@@ -55,7 +56,7 @@ launch/                       Kaggle and SSH launchers
 paper/                        the write-up
 ```
 
-Current folders: `adversarial_robustness/blacklight`, `jailbreak_prompt_injection/secalign`, `privacy/hamp`, `watermarking/kgw`, `watermarking/unigram`, `poisoning/flame`.
+Current folders: `adversarial_robustness/blacklight`, `jailbreak_prompt_injection/secalign`, `privacy/hamp`, `privacy/memguard`, `watermarking/kgw`, `watermarking/unigram`, `poisoning/flame`.
 
 ## Adding a defence or attack
 

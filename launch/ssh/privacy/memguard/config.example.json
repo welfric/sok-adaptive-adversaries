@@ -1,0 +1,13 @@
+{
+  "name": "cifar10-hamp-lira",
+  "target_dir": "/path/to/MIA_defense_HAMP/cifar10/lira-undefended-defense-fullMember-25000",
+  "shadow_dir": "/path/to/MIA_defense_HAMP/cifar10/lira-undefended-fullMember-25000",
+  "defence_classifier": "/path/to/MIA_defense_HAMP/cifar10/final-all-models/cifar10_25000_MIA_model.h5",
+  "logit_pattern": "{tag}_logit.npy",
+  "keep_pattern": "{tag}_keep.npy",
+  "labels_file": "shadow_label.npy",
+  "fpr": 0.001,
+  "table_variant": "online",
+  "workers": 0,
+  "notes": "dataset, LiRA variant and file locations to confirm with Rezwan"
+}
