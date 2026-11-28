@@ -29,7 +29,8 @@ Each field is evaluated on **several defences**, not one. Every defence gets its
 | Adversarial robustness | Blacklight (stateful query detection) | Li et al., USENIX Security 2022 | Implementation in the OARS repo | Ahmad |
 | Jailbreaking and prompt injection | SecAlign, released Meta-SecAlign-8B checkpoint (LoRA on Llama-3.1-8B-Instruct) | Chen et al., Meta SecAlign, arXiv:2507.02735 | [facebook/Meta-SecAlign-8B](https://huggingface.co/facebook/Meta-SecAlign-8B) (gated), [facebookresearch/Meta_SecAlign](https://github.com/facebookresearch/Meta_SecAlign) | Ahmad |
 | Privacy (membership inference) | HAMP | Chen and Pattabiraman, NDSS 2024 | [DependableSystemsLab/MIA_defense_HAMP](https://github.com/DependableSystemsLab/MIA_defense_HAMP) | Ahmad |
-| Watermarking | KGW | Kirchenbauer et al., ICML 2023 | KGW variants in the Watermark Stealing repo | Ahmad |
+| Watermarking | KGW2-SelfHash (self-salted anchored Min-hash, context width 4) | Kirchenbauer et al., *On the Reliability of Watermarks for Large Language Models*, ICLR 2024 (builds on KGW, ICML 2023) | `src/watermarks/kgw/` in the Watermark Stealing repo | Ahmad |
+| Watermarking | Unigram (one fixed green list) | Zhao et al., *Provable Robust Watermarking for AI-Generated Text*, ICLR 2024 | `gptwm` scheme in the Watermark Stealing repo | Ahmad |
 | Poisoning and backdoors (federated learning) | FLAME | Nguyen et al., USENIX Security 2022 | [zhmzm/FLAME](https://github.com/zhmzm/FLAME) (unofficial) | Ahmad |
 
 ## Attacks chosen for evaluation
@@ -41,7 +42,8 @@ Each defence is paired with an attack that is adaptive to it, so this table also
 | OARS | Feng et al., CCS 2023 | Blacklight | [nmangaokar/ccs_23_oars_stateful_attacks](https://github.com/nmangaokar/ccs_23_oars_stateful_attacks) | to annotate | to annotate | to annotate | Repo ships the CIFAR-10 checkpoint, the Blacklight implementation and adaptive configs |
 | Simple Adaptive Attacks (prompt template + random search) | Andriushchenko, Croce and Flammarion, ICLR 2025 | Meta-SecAlign-8B | [tml-epfl/llm-adaptive-attacks](https://github.com/tml-epfl/llm-adaptive-attacks) | to annotate | to annotate | to annotate | Needs gated model access and a port to SecAlign's input role |
 | Label-only adaptive MIA | Aerni, Zhang and Tramèr, CCS 2024 | HAMP | [ethz-spylab/misleading-privacy-evals](https://github.com/ethz-spylab/misleading-privacy-evals) | to annotate | to annotate | to annotate | Heavy: their HAMP script trains 640 models |
-| Watermark Stealing | Jovanović, Staab and Vechev, ICML 2024 | KGW | [eth-sri/watermark-stealing](https://github.com/eth-sri/watermark-stealing) | Yes, scheme and parameters, not the key (§3) | Yes, estimates over KGW's seeding context (§5, §6.1) | Online, fixed prompt set of n = 30,000, no detector access (§3, §4, §6) | A6000 script in `launch/ssh/watermarking/kgw/`; the authors' server outputs are no longer downloadable (404), so it regenerates them |
+| Watermark Stealing | Jovanović, Staab and Vechev, ICML 2024 | KGW2-SelfHash | [eth-sri/watermark-stealing](https://github.com/eth-sri/watermark-stealing) | Yes, scheme and parameters, not the key (§3) | Yes, estimates over KGW's seeding context (§5, §6.1) | Online, fixed prompt set of n = 30,000, no detector access (§3, §4, §6) | A6000 script in `launch/ssh/watermarking/kgw/`; the authors' server outputs are no longer downloadable (404), so it regenerates them |
+| Watermark Stealing | Jovanović, Staab and Vechev, ICML 2024 | Unigram | [eth-sri/watermark-stealing](https://github.com/eth-sri/watermark-stealing) | As for KGW2-SelfHash (§3) | Yes, the same estimator with context width 0 (§5) | As for KGW2-SelfHash (§3, §4, §6) | A6000 script in `launch/ssh/watermarking/unigram/`, two settings: the attack paper's γ = 0.25, δ = 4 and the defence paper's γ = 0.5, δ = 2 |
 | Optimisation-based attack framework | Yang et al., CIKM 2024, arXiv:2407.15267 | FLAME | [Yuxin104/BreakSTOAPoisoningDefenses](https://github.com/Yuxin104/BreakSTOAPoisoningDefenses) | Yes, AGR-tailored setting (§III, Table I) | Yes, "AGR-tailored attack to FLAME" (§IV-B) | Online: benign clients' gradients in the current round, gradients-known setting (§III, §IV-B) | Repo has the attack functions only; harness from zhmzm/FLAME |
 
 ## Repository layout
@@ -53,7 +55,7 @@ launch/                       Kaggle and SSH launchers
 paper/                        the write-up
 ```
 
-Current folders: `adversarial_robustness/blacklight`, `jailbreak_prompt_injection/secalign`, `privacy/hamp`, `watermarking/kgw`, `poisoning/flame`.
+Current folders: `adversarial_robustness/blacklight`, `jailbreak_prompt_injection/secalign`, `privacy/hamp`, `watermarking/kgw`, `watermarking/unigram`, `poisoning/flame`.
 
 ## Adding a defence or attack
 
