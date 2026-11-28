@@ -21,6 +21,7 @@ kaggle.json
 __pycache__/
 *.pyc
 .venv/
+.venv-kgw/
 .ipynb_checkpoints/
 
 # LaTeX build

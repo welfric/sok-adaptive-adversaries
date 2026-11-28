@@ -90,4 +90,8 @@ The Blacklight script stops after the data export and import check with `--prepa
 
 ## SSH
 
-`ssh/run.sh`, not written yet. See PLAN.md section 5.
+One folder per pair, mirroring `defenses/`: `ssh/<field>/<defence>/` holds a `setup.sh` (virtual environment with pinned packages), a resumable `run.py` and a README with the run instructions.
+
+| Folder | Runs | GPU | Output |
+|---|---|---|---|
+| [`ssh/watermarking/kgw`](ssh/watermarking/kgw/README.md) | Watermark Stealing vs KGW2-SelfHash, Table 1 setting: 30,000 queries to Llama-2-7B-chat, Mistral-7B attacker, spoofing on Dolly CW × 5 seeds, plus controls, PPL and judge | one RTX A6000 (48 GB), 64 GB+ RAM | `results/kgw_ws/summary.md`, `summary.json`, `records.jsonl`, `run.json` |
